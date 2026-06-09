@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>APEX XAU/USD · Market Analysis Terminal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg0:#0a0b0f; --bg1:#101218; --bg2:#161922; --bg3:#1d212c;
+    --line:#262b38; --lineSoft:#1f2430;
+    --txt:#e7e9ef; --txtDim:#9aa1b1; --txtFaint:#5e6678;
+    --gold:#f0b94e; --goldDim:#8a6b2a;
+    --buy:#2bd4a0; --buyDim:#155f4a; --sell:#ff5d6e; --sellDim:#6b2630;
+    --blue:#5aa9ff; --purple:#b98cff;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:radial-gradient(1200px 600px at 80% -10%, #16140c 0%, var(--bg0) 55%);
+    color:var(--txt); font-family:'Hanken Grotesk',sans-serif; min-height:100vh;
+    padding:16px clamp(12px,3vw,30px) 50px;
+  }
+  ::selection{background:rgba(240,185,78,.27);}
+  a{color:var(--gold);}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  .display{font-family:'Bricolage Grotesque',sans-serif;}
+  .card{background:var(--bg1);border:1px solid var(--line);border-radius:14px;padding:16px;}
+  .fade{animation:fade .5s ease both;}
+  @keyframes fade{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+  .livedot{animation:pulse 1.6s ease-in-out infinite;}
+
+  header{display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;margin-bottom:16px;}
+  .logo{width:46px;height:46px;border-radius:12px;background:linear-gradient(140deg,var(--gold),var(--goldDim));
+    display:grid;place-items:center;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:22px;color:#1a1206;
+    box-shadow:0 4px 20px rgba(240,185,78,.2);}
+  .title{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:22px;letter-spacing:-.5px;}
+  .title span{color:var(--gold);}
+  .sub{font-size:12px;color:var(--txtDim);font-family:'JetBrains Mono',monospace;}
+
+  .btn{cursor:pointer;border-radius:8px;font-family:'Hanken Grotesk',sans-serif;border:1px solid var(--line);
+    background:var(--bg2);color:var(--txtDim);padding:6px 12px;font-size:12px;font-weight:700;transition:all .15s ease;}
+  .btn:hover{filter:brightness(1.18);}
+  .btn.active{background:var(--gold);color:#1a1206;border-color:var(--gold);}
+  .seg{display:flex;gap:6px;}
+
+  .tfbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:14px;}
+  .tf{font-family:'JetBrains Mono',monospace;padding:6px 16px;}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--txtDim);font-family:'JetBrains Mono',monospace;}
+  .legend b{color:var(--txt);}
+
+  .grid{display:grid;grid-template-columns:minmax(0,2.4fr) minmax(0,1fr);gap:16px;align-items:start;}
+  @media(max-width:900px){.grid{grid-template-columns:1fr;}}
+  .tvwrap{height:520px;border-radius:10px;overflow:hidden;border:1px solid var(--lineSoft);}
+  @media(max-width:900px){.tvwrap{height:420px;}}
+  .tawrap{height:430px;border-radius:10px;overflow:hidden;}
+
+  .label{font-size:11px;color:var(--txtDim);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;}
+  .pill{font-size:10px;font-weight:700;letter-spacing:.5px;padding:2px 8px;border-radius:5px;font-family:'JetBrains Mono',monospace;text-transform:uppercase;}
+  .pill.buy{color:var(--buy);background:rgba(43,212,160,.13);border:1px solid var(--buyDim);}
+  .pill.sell{color:var(--sell);background:rgba(255,93,110,.13);border:1px solid var(--sellDim);}
+  .pill.hold{color:var(--gold);background:rgba(240,185,78,.13);border:1px solid var(--goldDim);}
+
+  .indlist{display:flex;flex-direction:column;gap:9px;margin-top:4px;}
+  .indrow{display:flex;justify-content:space-between;gap:8px;background:var(--bg2);border:1px solid var(--lineSoft);border-radius:10px;padding:9px 11px;}
+  .indrow .nm{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;}
+  .indrow .ds{font-size:11px;color:var(--txtDim);}
+
+  .genbtn{background:linear-gradient(135deg,var(--gold),var(--goldDim));color:#1a1206;border:none;border-radius:10px;
+    padding:11px 20px;font-size:14px;font-weight:800;cursor:pointer;font-family:'Hanken Grotesk',sans-serif;box-shadow:0 4px 16px rgba(240,185,78,.22);}
+  .genbtn:disabled{opacity:.6;cursor:wait;}
+
+  .aigrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:14px;}
+  .aistat{background:var(--bg1);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-family:'JetBrains Mono',monospace;}
+  .aistat .k{font-size:10px;color:var(--txtDim);letter-spacing:.5px;text-transform:uppercase;margin-bottom:5px;}
+  .barbg{height:5px;border-radius:5px;background:var(--bg3);margin-top:6px;overflow:hidden;}
+  .barfill{height:100%;background:var(--gold);}
+
+  .conc{margin-top:14px;background:var(--bg2);border:1px solid var(--lineSoft);border-radius:12px;padding:14px 16px;}
+  .conc .h{font-size:11px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;font-weight:700;margin-bottom:6px;}
+  .conc .b{font-size:13.5px;line-height:1.65;color:var(--txt);}
+
+  .factors{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-top:10px;}
+  .factor{background:var(--bg2);border:1px solid var(--lineSoft);border-radius:10px;padding:8px 10px;}
+  .factor .fk{color:var(--gold);font-weight:700;font-size:11px;font-family:'JetBrains Mono',monospace;margin-bottom:3px;}
+  .factor .fv{color:var(--txtDim);font-size:11.5px;line-height:1.4;}
+
+  .meter{height:6px;border-radius:6px;background:linear-gradient(90deg,var(--sell),var(--gold),var(--buy));position:relative;margin:6px 0 12px;}
+  .meter .dot{position:absolute;top:-3px;width:12px;height:12px;border-radius:12px;background:var(--txt);border:2px solid var(--bg0);}
+
+  .note{font-size:11px;color:var(--txtFaint);line-height:1.5;margin-top:10px;}
+  .err{background:rgba(255,93,110,.15);border:1px solid var(--sellDim);color:var(--sell);padding:9px 12px;border-radius:10px;font-size:13px;margin-top:14px;}
+  .placeholder{margin-top:16px;padding:24px 16px;text-align:center;color:var(--txtFaint);font-size:13px;border:1px dashed var(--line);border-radius:12px;}
+  .stack{display:flex;flex-direction:column;gap:16px;}
+</style>
+</head>
+<body>
+
+<header class="fade">
+  <div style="display:flex;align-items:center;gap:14px;">
+    <div class="logo">Au</div>
+    <div>
+      <div class="title">APEX <span>XAU/USD</span></div>
+      <div class="sub">Market Analysis Terminal · TradingView × Claude</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+    <div id="tvticker" style="min-width:200px;max-width:280px;"></div>
+    <button class="btn" id="langBtn" onclick="toggleLang()">ID</button>
+  </div>
+</header>
+
+<div class="tfbar fade">
+  <div class="seg" id="tfSeg">
+    <button class="btn tf active" data-tf="30m" onclick="setTf('30m')">30M</button>
+    <button class="btn tf" data-tf="1H" onclick="setTf('1H')">1H</button>
+    <button class="btn tf" data-tf="4H" onclick="setTf('4H')">4H</button>
+  </div>
+  <div class="legend">
+    <span><b style="color:var(--blue)">━</b> MA50</span>
+    <span><b style="color:var(--purple)">━</b> MA200</span>
+    <span><b style="color:var(--gold)">┄</b> BB(20,2)</span>
+    <span><b>RSI</b>(14)</span>
+    <span><b>MACD</b>(12,26,9)</span>
+  </div>
+</div>
+
+<div class="grid">
+  <!-- TradingView chart -->
+  <div class="card fade" style="padding:12px;">
+    <div class="tvwrap" id="tvchart"></div>
+    <div class="note" data-id="Chart asli TradingView (OANDA:XAUUSD). RSI(14), MACD(12,26,9), Bollinger(20,2) sudah sesuai default. Jika garis MA belum 50/200, klik indikator MA di chart → set Length. Timezone Asia/Tokyo (UTC+9)."
+                       data-en="Live TradingView chart (OANDA:XAUUSD). RSI(14), MACD(12,26,9), Bollinger(20,2) match defaults. If MA lines aren't 50/200, click the MA study on the chart → set Length. Timezone Asia/Tokyo (UTC+9)."></div>
+  </div>
+
+  <!-- Right column: TradingView TA + indicators used -->
+  <div class="stack">
+    <div class="card fade">
+      <div class="label" data-id="Analisa Teknikal (Real-time TradingView)" data-en="Technical Analysis (Real-time TradingView)">Analisa Teknikal</div>
+      <div class="tawrap" id="tvta"></div>
+    </div>
+    <div class="card fade">
+      <div class="label" data-id="Indikator Yang Dipakai" data-en="Indicators Used">Indikator</div>
+      <div class="indlist">
+        <div class="indrow"><div><div class="nm">RSI</div><div class="ds" data-id="Period 14 · momentum (overbought/oversold)" data-en="Period 14 · momentum (overbought/oversold)"></div></div></div>
+        <div class="indrow"><div><div class="nm">MACD</div><div class="ds" data-id="12/26/9 · momentum & perubahan tren" data-en="12/26/9 · momentum & trend change"></div></div></div>
+        <div class="indrow"><div><div class="nm">MA50</div><div class="ds" data-id="Tren jangka pendek-menengah" data-en="Short–mid term trend"></div></div></div>
+        <div class="indrow"><div><div class="nm">MA200</div><div class="ds" data-id="Tren jangka panjang / arah pasar utama" data-en="Long-term / major market direction"></div></div></div>
+        <div class="indrow"><div><div class="nm">Bollinger</div><div class="ds" data-id="20, StdDev 2.0 · volatilitas & level ekstrem" data-en="20, StdDev 2.0 · volatility & extremes"></div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AI ANALYSIS -->
+<div class="card fade" style="margin-top:16px;border-color:rgba(240,185,78,.27);">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+    <div>
+      <div class="display" style="font-weight:800;font-size:18px;">🧠 <span data-id="Analisa AI" data-en="AI Analysis">Analisa AI</span></div>
+      <div style="font-size:11.5px;color:var(--txtDim);margin-top:2px;" data-id="Confidence, rentang entry, SL, TP & kesimpulan — dianalisa via RSI/MACD/MA/Bollinger + sentimen live" data-en="Confidence, entry range, SL, TP & conclusion — via RSI/MACD/MA/Bollinger + live sentiment"></div>
+    </div>
+    <button class="genbtn" id="genBtn" onclick="genAnalysis()">⚡ <span data-id="Hasilkan Analisa" data-en="Generate Analysis">Hasilkan Analisa</span></button>
+  </div>
+  <div id="aiBody">
+    <div class="placeholder" data-id="Klik “Hasilkan Analisa” untuk rekomendasi trade dari kondisi pasar saat ini." data-en="Click “Generate Analysis” for a trade recommendation from current market conditions.">Klik “Hasilkan Analisa”.</div>
+  </div>
+  <div class="note">⚠ <span data-id="Analisa AI untuk edukasi, bukan saran finansial. Konfirmasi di chart MT5 & kelola risiko sendiri." data-en="AI analysis is for education, not financial advice. Confirm on your MT5 chart & manage your own risk."></span></div>
+</div>
+
+<script>
+/* ---------------- state & i18n ---------------- */
+let TF = "30m";
+let LANG = "id";
+
+const TF_MAP = {
+  "30m": { chart: "30", ta: "30m" },
+  "1H":  { chart: "60", ta: "1h" },
+  "4H":  { chart: "240", ta: "4h" },
+};
+
+function applyLang(){
+  document.querySelectorAll("[data-id]").forEach(el=>{
+    const v = LANG==="id" ? el.getAttribute("data-id") : el.getAttribute("data-en");
+    if(v!==null) el.textContent = v;
+  });
+  document.getElementById("langBtn").textContent = LANG==="id" ? "ID" : "EN";
+  document.documentElement.lang = LANG;
+}
+function toggleLang(){ LANG = LANG==="id" ? "en" : "id"; applyLang(); if(lastResult) renderAnalysis(lastResult); }
+
+/* ---------------- TradingView widgets ---------------- */
+function tvScript(container, src, config){
+  container.innerHTML = "";
+  const wrap = document.createElement("div");
+  wrap.className = "tradingview-widget-container";
+  wrap.style.height = "100%"; wrap.style.width = "100%";
+  const inner = document.createElement("div");
+  inner.className = "tradingview-widget-container__widget";
+  inner.style.height = "100%"; inner.style.width = "100%";
+  wrap.appendChild(inner);
+  const s = document.createElement("script");
+  s.type = "text/javascript"; s.async = true; s.src = src;
+  s.innerHTML = JSON.stringify(config);
+  wrap.appendChild(s);
+  container.appendChild(wrap);
+}
+
+function buildChart(){
+  tvScript(document.getElementById("tvchart"),
+    "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js",
+    {
+      autosize: true,
+      symbol: "OANDA:XAUUSD",
+      interval: TF_MAP[TF].chart,
+      timezone: "Asia/Tokyo",
+      theme: "dark",
+      style: "1",
+      locale: "en",
+      backgroundColor: "#101218",
+      gridColor: "rgba(38,43,56,0.6)",
+      hide_side_toolbar: false,
+      allow_symbol_change: true,
+      details: false,
+      withdateranges: true,
+      studies: [
+        { id: "MASimple@tv-basicstudies", inputs: { length: 50 } },
+        { id: "MASimple@tv-basicstudies", inputs: { length: 200 } },
+        { id: "BB@tv-basicstudies", inputs: { length: 20, stdDev: 2 } },
+        { id: "RSI@tv-basicstudies", inputs: { length: 14 } },
+        { id: "MACD@tv-basicstudies", inputs: { fastLength: 12, slowLength: 26, signalLength: 9 } }
+      ],
+      support_host: "https://www.tradingview.com"
+    });
+}
+
+function buildTA(){
+  tvScript(document.getElementById("tvta"),
+    "https://s3.tradingview.com/external-embedding/embed-widget-technical-analysis.js",
+    {
+      interval: TF_MAP[TF].ta,
+      width: "100%",
+      height: "100%",
+      isTransparent: true,
+      symbol: "OANDA:XAUUSD",
+      showIntervalTabs: false,
+      displayMode: "single",
+      locale: "en",
+      colorTheme: "dark"
+    });
+}
+
+function buildTicker(){
+  tvScript(document.getElementById("tvticker"),
+    "https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js",
+    {
+      symbol: "OANDA:XAUUSD",
+      width: "100%",
+      isTransparent: true,
+      colorTheme: "dark",
+      locale: "en"
+    });
+}
+
+function setTf(tf){
+  TF = tf;
+  document.querySelectorAll(".tf").forEach(b=>b.classList.toggle("active", b.getAttribute("data-tf")===tf));
+  buildChart(); buildTA();
+}
+
+/* ---------------- AI analysis ---------------- */
+let lastResult = null;
+const fmt = (x,d=1)=> (x==null||isNaN(x)) ? "—" : Number(x).toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});
+
+async function genAnalysis(){
+  const btn = document.getElementById("genBtn");
+  const body = document.getElementById("aiBody");
+  btn.disabled = true;
+  body.innerHTML = `<div class="placeholder" style="color:var(--gold);">${LANG==="id"?"Membaca harga, indikator & sentimen live…":"Reading live price, indicators & sentiment…"}</div>`;
+  try{
+    const res = await fetch("/api/claude", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ timeframe: TF, symbol:"XAU/USD" })
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || ("HTTP "+res.status));
+    lastResult = data;
+    renderAnalysis(data);
+  }catch(e){
+    body.innerHTML = `<div class="err">⚠ ${LANG==="id"?"Gagal":"Failed"}: ${e.message}</div>`;
+  }finally{
+    btn.disabled = false;
+  }
+}
+
+function renderAnalysis(d){
+  const a = d.analysis || {};
+  const s = d.sentiment || {};
+  const side = (a.side||"WAIT").toUpperCase();
+  const sideCls = side==="BUY"?"buy":side==="SELL"?"sell":"hold";
+  const sideCol = side==="BUY"?"var(--buy)":side==="SELL"?"var(--sell)":"var(--gold)";
+  const conc = LANG==="id" ? a.conclusionId : a.conclusionEn;
+  const sumS = LANG==="id" ? s.summaryId : s.summaryEn;
+  const sBias = (s.score>=55)?"buy":(s.score<=45)?"sell":"hold";
+
+  const L = (id,en)=> LANG==="id"?id:en;
+
+  document.getElementById("aiBody").innerHTML = `
+    <div style="margin-top:16px;">
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px;">
+        <div class="display" style="font-weight:800;font-size:30px;color:${sideCol};padding:4px 18px;border-radius:10px;
+             background:${sideCol.replace('var(--','rgba(').replace(')',')')};border:1px solid ${sideCol};line-height:1.1;
+             background:${side==='BUY'?'rgba(43,212,160,.1)':side==='SELL'?'rgba(255,93,110,.1)':'rgba(240,185,78,.1)'};">${side}</div>
+        <div class="mono" style="font-size:11px;color:var(--txtFaint);">${TF} · @ $${fmt(d.price,1)} · ${d.asOf||""}</div>
+      </div>
+
+      <div class="aigrid">
+        <div class="aistat"><div class="k">${L("Keyakinan","Confidence")}</div>
+          <div style="display:flex;align-items:baseline;gap:6px;"><span style="font-size:24px;font-weight:700;">${a.confidence??"—"}</span><span style="font-size:13px;color:var(--txtDim);">%</span></div>
+          <div class="barbg"><div class="barfill" style="width:${Math.min(100,a.confidence||0)}%;"></div></div>
+        </div>
+        <div class="aistat"><div class="k">${L("Rentang Entry","Entry Range")}</div>
+          <span style="font-size:18px;font-weight:700;">${fmt(a.entryLow,1)}</span><span style="color:var(--txtDim);"> – </span><span style="font-size:18px;font-weight:700;">${fmt(a.entryHigh,1)}</span>
+        </div>
+        <div class="aistat"><div class="k">Stop Loss</div><span style="font-size:20px;font-weight:700;color:var(--sell);">${fmt(a.sl,1)}</span></div>
+        <div class="aistat"><div class="k">Take Profit</div>
+          <div style="font-size:14px;font-weight:700;color:var(--buy);">TP1 ${fmt(a.tp1,1)}</div>
+          <div style="font-size:14px;font-weight:700;color:var(--buy);opacity:.8;">TP2 ${fmt(a.tp2,1)}</div>
+        </div>
+        <div class="aistat"><div class="k">Risk : Reward</div><span style="font-size:20px;font-weight:700;">1 : ${fmt(a.rr,2)}</span></div>
+      </div>
+
+      <div class="conc">
+        <div class="h">${L("Kesimpulan — kenapa entry di sini","Conclusion — why enter here")}</div>
+        <div class="b">${conc||"—"}</div>
+      </div>
+
+      <div class="conc" style="margin-top:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div class="h" style="margin:0;">${L("Sentimen Global","Global Sentiment")}</div>
+          <span class="pill ${sBias}">${s.bias||"—"} ${s.score??""}</span>
+        </div>
+        <div class="meter"><div class="dot" style="left:calc(${s.score||50}% - 6px);"></div></div>
+        <div class="b" style="font-size:13px;">${sumS||""}</div>
+        <div class="factors">
+          <div class="factor"><div class="fk">USD/DXY</div><div class="fv">${s.dxy||"—"}</div></div>
+          <div class="factor"><div class="fk">Fed</div><div class="fv">${s.fed||"—"}</div></div>
+          <div class="factor"><div class="fk">Yields</div><div class="fv">${s.yields||"—"}</div></div>
+          <div class="factor"><div class="fk">${L("Geopolitik","Geopolitics")}</div><div class="fv">${s.geopolitics||"—"}</div></div>
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ---------------- init ---------------- */
+applyLang();
+buildTicker();
+buildChart();
+buildTA();
+</script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+{
+  "name": "apex-xau-vercel",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "APEX XAU/USD Market Analysis Terminal — TradingView chart + Claude AI analysis on Vercel"
+}
